@@ -1,12 +1,24 @@
 # go-stream
-Lazy stream to work with slices wich will be calculated only when terminal function called
+Lazy stream to work with slices wich will be calculated only when terminal function called or during the mapping
 ## Creation
+New
 ```
 import "github.com/catmorte/go-streams/pkg/stream"
 ...
-array := []any{...} 
+array := []SomeType1{...} 
 ...
 stream := stream.New(array)
+```
+Mapped from another
+```
+import "github.com/catmorte/go-streams/pkg/stream"
+...
+array := []SomeType1{...} 
+...
+streamType1 := stream.New(array)
+streamType2 := stream.Map(streamType1, func(i int, v SomeType1) []SomeType2 {
+  return []SomeType2{...}
+})
 ```
 ## Methods
 ### Non-terminal methods

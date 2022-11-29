@@ -42,17 +42,19 @@ streamType2 := stream.Map(streamType1, func(i int, v SomeType1) []SomeType2 {
 
 `Count() int` - get amount of values
 
-`AllMatch(checkValues func(int, V) bool) bool` - check if all matches condition function
+`AllMatch(checkValues FilterFunc[V]) bool` - check if all matches condition function
 
-`AnyMatch(checkValues func(int, V) bool) bool` - check if any matches condition function
+`AnyMatch(checkValues FilterFunc[V]) bool` - check if any matches condition function
 
-`NoneMatch(checkValues func(int, V) bool) bool` - check if none matches condition function
+`NoneMatch(checkValues FilterFunc[V]) bool` - check if none matches condition function
 
 `ForEach(do DoFunc[V]) error` - do for each synchronously
 
 `ForEachAsync(do DoFunc[V]) error` - do for each asynchronously
 
 `Get() []V` - get values
+
+`FirstBy(checkValues FilterFunc[V]) (V, bool)` - get first value that is satisfying condition func (true if exists)
 
 
 

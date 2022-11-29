@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/catmorte/go-streams/pkg/stream"
 )
@@ -16,7 +15,7 @@ func sortValues(_, a, _, b int) bool {
 }
 
 func peekValues(i, a int) {
-	fmt.Printf("%v: %v\n", i, a)
+	fmt.Printf("Peek %v: %v\n", i, a)
 }
 
 func filterValues(i, a int) bool {
@@ -24,16 +23,19 @@ func filterValues(i, a int) bool {
 }
 
 func forEachValues(i, a int) error {
-	time.Sleep(time.Second * 5)
-	fmt.Printf("%v - %v", i, a)
+	fmt.Printf("For each %v: %v\n", i, a)
 	return nil
 }
 
 func main() {
 	x := []int{1, 9, 9, 9, 2, 3, 4, 5, 5, 5, 5, 6, 7, 8, 9}
-	start := time.Now()
-	result := stream.New(x).Sort(sortValues).Distinct(distinctValues).Peek(peekValues).Skip(5).Peek(peekValues).Filter(filterValues).Peek(peekValues).ForEach(forEachValues)
-	end := time.Now()
-	fmt.Println(result)
-	fmt.Println(end.Sub(start).Seconds())
+	originalS := stream.New(x).Sort(sortValues)
+	distinctS := originalS.Distinct(distinctValues)
+	filteredS := distinctS.Peek(peekValues).Skip(5).Peek(peekValues).Filter(filterValues).Peek(peekValues)
+	fmt.Println("Filtered:")
+	filteredS.ForEach(forEachValues)
+	fmt.Println("Distinct:")
+	distinctS.ForEach(forEachValues)
+	fmt.Println("Original sorted:")
+	originalS.ForEach(forEachValues)
 }

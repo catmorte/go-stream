@@ -19,11 +19,12 @@ type (
 
 	Stream[V any] interface {
 		First() (V, bool)
+		FirstBy(checkValues FilterFunc[V]) (V, bool)
 		Last() (V, bool)
 		Count() int
-		AllMatch(checkValues func(int, V) bool) bool
-		AnyMatch(checkValues func(int, V) bool) bool
-		NoneMatch(checkValues func(int, V) bool) bool
+		AllMatch(checkValues FilterFunc[V]) bool
+		AnyMatch(checkValues FilterFunc[V]) bool
+		NoneMatch(checkValues FilterFunc[V]) bool
 		ForEach(do DoFunc[V]) error
 		ForEachAsync(do DoFunc[V]) error
 		Get() []V
@@ -108,6 +109,17 @@ func (p stream[V]) Sort(sortValues SortFunc[V]) Stream[V] {
 	}
 }
 
+func (p stream[V]) FirstBy(checkValues FilterFunc[V]) (V, bool) {
+	values := p.callChain()
+	for i, v := range values {
+		if checkValues(i, v) {
+			return v, true
+		}
+	}
+	var defaultValue V
+	return defaultValue, false
+}
+
 func (p stream[V]) Filter(checkValues FilterFunc[V]) Stream[V] {
 	chain := append(p.chain, func(values *[]V) {
 		var newValues []V
@@ -175,7 +187,7 @@ func (p stream[V]) Distinct(eqValues EqFunc[V]) Stream[V] {
 	}
 }
 
-func (p stream[V]) AllMatch(checkValues func(int, V) bool) bool {
+func (p stream[V]) AllMatch(checkValues FilterFunc[V]) bool {
 	values := p.callChain()
 	for i, v := range values {
 		if !checkValues(i, v) {
@@ -185,7 +197,7 @@ func (p stream[V]) AllMatch(checkValues func(int, V) bool) bool {
 	return true
 }
 
-func (p stream[V]) AnyMatch(checkValues func(int, V) bool) bool {
+func (p stream[V]) AnyMatch(checkValues FilterFunc[V]) bool {
 	values := p.callChain()
 	for i, v := range values {
 		if checkValues(i, v) {
@@ -195,7 +207,7 @@ func (p stream[V]) AnyMatch(checkValues func(int, V) bool) bool {
 	return false
 }
 
-func (p stream[V]) NoneMatch(checkValues func(int, V) bool) bool {
+func (p stream[V]) NoneMatch(checkValues FilterFunc[V]) bool {
 	values := p.callChain()
 	for i, v := range values {
 		if checkValues(i, v) {

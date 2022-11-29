@@ -19,7 +19,7 @@ type (
 
 	Stream[V any] interface {
 		First() (V, bool)
-		FirstBy(checkValues FilterFunc[V]) (V, bool)
+		FirstBy(checkValues FilterFunc[V]) (int, V, bool)
 		Last() (V, bool)
 		Count() int
 		AllMatch(checkValues FilterFunc[V]) bool
@@ -109,15 +109,15 @@ func (p stream[V]) Sort(sortValues SortFunc[V]) Stream[V] {
 	}
 }
 
-func (p stream[V]) FirstBy(checkValues FilterFunc[V]) (V, bool) {
+func (p stream[V]) FirstBy(checkValues FilterFunc[V]) (int, V, bool) {
 	values := p.callChain()
 	for i, v := range values {
 		if checkValues(i, v) {
-			return v, true
+			return i, v, true
 		}
 	}
 	var defaultValue V
-	return defaultValue, false
+	return 0, defaultValue, false
 }
 
 func (p stream[V]) Filter(checkValues FilterFunc[V]) Stream[V] {

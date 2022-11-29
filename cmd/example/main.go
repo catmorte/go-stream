@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/catmorte/go-streams/pkg/stream"
 )
@@ -43,4 +44,7 @@ func main() {
 	originalS.ForEach(forEachValues[int])
 	fmt.Println("Map:")
 	mappedS.ForEach(forEachValues[string])
+	fmt.Println(mappedS.FirstBy(func(i int, a string) bool {
+		return strings.HasPrefix(a, "index:3")
+	}))
 }

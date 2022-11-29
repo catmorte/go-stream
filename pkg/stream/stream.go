@@ -36,7 +36,7 @@ type (
 	}
 )
 
-func Map[V any, NV any](s stream[V], mapValue func(i int, value V) []NV) stream[NV] {
+func Map[V any, NV any](s Stream[V], mapValue func(i int, value V) []NV) Stream[NV] {
 	values := s.Get()
 	newValues := []NV{}
 	for i, v := range values {

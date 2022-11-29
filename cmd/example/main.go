@@ -22,7 +22,7 @@ func filterValues(i, a int) bool {
 	return a%3 == 0
 }
 
-func forEachValues(i, a int) error {
+func forEachValues[V any](i int, a V) error {
 	fmt.Printf("For each %v: %v\n", i, a)
 	return nil
 }
@@ -32,10 +32,15 @@ func main() {
 	originalS := stream.New(x).Sort(sortValues)
 	distinctS := originalS.Distinct(distinctValues)
 	filteredS := distinctS.Peek(peekValues).Skip(5).Peek(peekValues).Filter(filterValues).Peek(peekValues)
+	mappedS := stream.Map(originalS, func(i int, v int) []string {
+		return []string{fmt.Sprintf("index:%v", i), fmt.Sprintf("value:%v", v)}
+	})
 	fmt.Println("Filtered:")
-	filteredS.ForEach(forEachValues)
+	filteredS.ForEach(forEachValues[int])
 	fmt.Println("Distinct:")
-	distinctS.ForEach(forEachValues)
+	distinctS.ForEach(forEachValues[int])
 	fmt.Println("Original sorted:")
-	originalS.ForEach(forEachValues)
+	originalS.ForEach(forEachValues[int])
+	fmt.Println("Map:")
+	mappedS.ForEach(forEachValues[string])
 }

@@ -54,7 +54,7 @@ streamType2 := stream.Map(streamType1, func(i int, v SomeType1) []SomeType2 {
 
 `Get() []V` - get values
 
-`FirstBy(checkValues FilterFunc[V]) (V, bool)` - get first value that is satisfying condition func (true if exists)
+`FirstBy(checkValues FilterFunc[V]) (int, V, bool)` - get first value that is satisfying condition func returns index, value and if exists (true if exists)
 
 
 

@@ -7,12 +7,13 @@ import (
 )
 
 type (
-	SortFunc[V any]   func(i int, a V, j int, b V) bool
-	FilterFunc[V any] func(i int, a V) bool
-	DoFunc[V any]     func(i int, a V) error
-	PeekFunc[V any]   func(i int, a V)
-	EqFunc[V any]     func(i int, a V, j int, b V) bool
-	stream[V any]     struct {
+	SortFunc[V any]    func(i int, a V, j int, b V) bool
+	FilterFunc[V any]  func(i int, a V) bool
+	DoFunc[V any]      func(i int, a V) error
+	PeekFunc[V any]    func(i int, a V)
+	EqFunc[V any]      func(i int, a V, j int, b V) bool
+	DoChunkFunc[V any] func(from, to int, chunk []V) error
+	stream[V any]      struct {
 		values []V
 		chain  []func(*[]V)
 	}
@@ -27,6 +28,8 @@ type (
 		NoneMatch(checkValues FilterFunc[V]) bool
 		ForEach(do DoFunc[V]) error
 		ForEachAsync(do DoFunc[V]) error
+		ForEachChunk(chunkSize int, do DoChunkFunc[V]) error
+		ForEachChunkAsync(chunkSize int, do DoChunkFunc[V]) error
 		Get() []V
 		Sort(sortValues SortFunc[V]) Stream[V]
 		Filter(checkValues FilterFunc[V]) Stream[V]
@@ -78,6 +81,35 @@ func (p stream[V]) Last() (V, bool) {
 		return defaultValue, false
 	}
 	return p.values[length-1], true
+}
+
+func (p stream[V]) ForEachChunk(chunkSize int, do DoChunkFunc[V]) error {
+	values := p.callChain()
+	for i := 0; i < len(values); i += chunkSize {
+		end := i + chunkSize
+		if end > len(values) {
+			end = len(values)
+		}
+		err := do(i, end, values[i:end])
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (p stream[V]) ForEachChunkAsync(chunkSize int, do DoChunkFunc[V]) error {
+	values := p.callChain()
+	g := new(errgroup.Group)
+	for i := 0; i < len(values); i += chunkSize {
+		start := i
+		end := i + chunkSize
+		if end > len(values) {
+			end = len(values)
+		}
+		g.Go(func() error { return do(start, end, values[start:end]) })
+	}
+	return g.Wait()
 }
 
 func (p stream[V]) Count() int {

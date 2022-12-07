@@ -47,4 +47,11 @@ func main() {
 	fmt.Println(mappedS.FirstBy(func(i int, a string) bool {
 		return strings.HasPrefix(a, "index:3")
 	}))
+
+	originalS.ForEachChunk(6, func(from, to int, chunk []int) error {
+		fmt.Printf("From: %v    To: %v   Chunk: %v\n", from, to, chunk)
+		return nil
+	} )
+	fmt.Println(originalS.Get())
+	fmt.Println(originalS.Count())
 }

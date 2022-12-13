@@ -34,6 +34,8 @@ streamType2 := stream.Map(streamType1, func(i int, v SomeType1) []SomeType2 {
 
 `Distinct(compareValues EqFunc[V]) Stream[V]` - remove duplicates using funcition to compare 
 
+`Expand(remap ExpandFunc[V]) Stream[V]` - expand value element to a slice of values
+
 ### Terminal methods
 
 `First() (V, bool)` - get first value (true if exists)

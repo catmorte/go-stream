@@ -33,7 +33,7 @@ func main() {
 	originalS := stream.New(x).Sort(sortValues)
 	distinctS := originalS.Distinct(distinctValues)
 	filteredS := distinctS.Peek(peekValues).Skip(5).Peek(peekValues).Filter(filterValues).Peek(peekValues)
-	mappedS := stream.Map(originalS, func(i int, v int) []string {
+	mappedS := stream.Wrap(originalS, func(i int, v int) []string {
 		return []string{fmt.Sprintf("index:%v", i), fmt.Sprintf("value:%v", v)}
 	})
 	fmt.Println("Filtered:")

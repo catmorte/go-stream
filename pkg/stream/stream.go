@@ -7,13 +7,15 @@ import (
 )
 
 type (
-	SortFunc[V any]    func(i int, a V, j int, b V) bool
-	FilterFunc[V any]  func(i int, a V) bool
-	DoFunc[V any]      func(i int, a V) error
-	PeekFunc[V any]    func(i int, a V)
-	EqFunc[V any]      func(i int, a V, j int, b V) bool
-	DoChunkFunc[V any] func(from, to int, chunk []V) error
-	stream[V any]      struct {
+	SortFunc[V any]              func(i int, a V, j int, b V) bool
+	FilterFunc[V any]            func(i int, a V) bool
+	DoFunc[V any]                func(i int, a V) error
+	ExpandFunc[V any]            func(i int, a V) []V
+	PeekFunc[V any]              func(i int, a V)
+	EqFunc[V any]                func(i int, a V, j int, b V) bool
+	DoChunkFunc[V any]           func(from, to int, chunk []V) error
+	WrapValueFunc[V any, NV any] func(i int, value V) []NV
+	stream[V any]                struct {
 		values []V
 		chain  []func(*[]V)
 	}
@@ -34,17 +36,18 @@ type (
 		Sort(sortValues SortFunc[V]) Stream[V]
 		Filter(checkValues FilterFunc[V]) Stream[V]
 		Peek(peekValues PeekFunc[V]) Stream[V]
+		Expand(remap ExpandFunc[V]) Stream[V]
 		Limit(int) Stream[V]
 		Skip(int) Stream[V]
 		Distinct(compareValues EqFunc[V]) Stream[V]
 	}
 )
 
-func Map[V any, NV any](s Stream[V], mapValue func(i int, value V) []NV) Stream[NV] {
+func Wrap[V any, NV any](s Stream[V], wrapValue WrapValueFunc[V, NV]) Stream[NV] {
 	values := s.Get()
 	newValues := []NV{}
 	for i, v := range values {
-		newValues = append(newValues, mapValue(i, v)...)
+		newValues = append(newValues, wrapValue(i, v)...)
 	}
 	return stream[NV]{
 		values: newValues,
@@ -122,6 +125,20 @@ func (p stream[V]) Peek(peekValues PeekFunc[V]) Stream[V] {
 		for i, v := range *values {
 			peekValues(i, v)
 		}
+	})
+	return stream[V]{
+		values: p.values,
+		chain:  chain,
+	}
+}
+
+func (p stream[V]) Expand(expandFunc ExpandFunc[V]) Stream[V] {
+	chain := append(p.chain, func(values *[]V) {
+		var newValues []V
+		for i, v := range *values {
+			newValues = append(newValues, expandFunc(i, v)...)
+		}
+		*values = newValues
 	})
 	return stream[V]{
 		values: p.values,

@@ -52,6 +52,10 @@ streamType2 := stream.Map(streamType1, func(i int, v SomeType1) []SomeType2 {
 
 `ForEachAsync(do DoFunc[V]) error` - do for each asynchronously
 
+`ForEachChunk(chunkSize int, do DoChunkFunc[V]) error` - do for each chunk of size synchronously
+
+`ForEachChunkAsync(chunkSize int, do DoChunkFunc[V]) error` - do for each chunk of size asynchronously
+    
 `Get() []V` - get values
 
 `FirstBy(checkValues FilterFunc[V]) (int, V, bool)` - get first value that is satisfying condition func returns index, value and if exists (true if exists)

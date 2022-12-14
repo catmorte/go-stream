@@ -1,5 +1,5 @@
 # go-stream
-Lazy stream to work with slices wich will be calculated only when terminal function called or during the mapping
+Lazy stream to work with slices wich will be calculated only when terminal function called or during the wrapping
 ## Creation
 New
 ```

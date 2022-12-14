@@ -16,7 +16,7 @@ import "github.com/catmorte/go-streams/pkg/stream"
 array := []SomeType1{...} 
 ...
 streamType1 := stream.New(array)
-streamType2 := stream.Map(streamType1, func(i int, v SomeType1) []SomeType2 {
+streamType2 := stream.Wrap(streamType1, func(i int, v SomeType1) []SomeType2 {
   return []SomeType2{...}
 })
 ```

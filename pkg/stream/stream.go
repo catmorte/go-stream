@@ -14,6 +14,7 @@ type (
 	PeekFunc[V any]              func(i int, a V)
 	EqFunc[V any]                func(i int, a V, j int, b V) bool
 	DoChunkFunc[V any]           func(from, to int, chunk []V) error
+	ExtractKeyFunc[V any]        func(i int, a V) interface{}
 	WrapValueFunc[V any, NV any] func(i int, value V) []NV
 	stream[V any]                struct {
 		values []V
@@ -24,6 +25,7 @@ type (
 		First() (V, bool)
 		FirstBy(checkValues FilterFunc[V]) (int, V, bool)
 		Last() (V, bool)
+		LastBy(checkValues FilterFunc[V]) (int, V, bool)
 		Count() int
 		AllMatch(checkValues FilterFunc[V]) bool
 		AnyMatch(checkValues FilterFunc[V]) bool
@@ -33,6 +35,7 @@ type (
 		ForEachChunk(chunkSize int, do DoChunkFunc[V]) error
 		ForEachChunkAsync(chunkSize int, do DoChunkFunc[V]) error
 		Get() []V
+		Reverse() Stream[V]
 		Sort(sortValues SortFunc[V]) Stream[V]
 		Filter(checkValues FilterFunc[V]) Stream[V]
 		Peek(peekValues PeekFunc[V]) Stream[V]
@@ -40,6 +43,7 @@ type (
 		Limit(int) Stream[V]
 		Skip(int) Stream[V]
 		Distinct(compareValues EqFunc[V]) Stream[V]
+		DistinctByKey(distinctKey ExtractKeyFunc[V]) Stream[V]
 	}
 )
 
@@ -121,41 +125,41 @@ func (p stream[V]) Count() int {
 }
 
 func (p stream[V]) Peek(peekValues PeekFunc[V]) Stream[V] {
-	chain := append(p.chain, func(values *[]V) {
+	return p.wrapWithFunc(func(values *[]V) {
 		for i, v := range *values {
 			peekValues(i, v)
 		}
 	})
-	return stream[V]{
-		values: p.values,
-		chain:  chain,
-	}
 }
 
 func (p stream[V]) Expand(expandFunc ExpandFunc[V]) Stream[V] {
-	chain := append(p.chain, func(values *[]V) {
+	return p.wrapWithFunc(func(values *[]V) {
 		var newValues []V
 		for i, v := range *values {
 			newValues = append(newValues, expandFunc(i, v)...)
 		}
 		*values = newValues
 	})
-	return stream[V]{
-		values: p.values,
-		chain:  chain,
-	}
 }
 
 func (p stream[V]) Sort(sortValues SortFunc[V]) Stream[V] {
-	chain := append(p.chain, func(values *[]V) {
+	return p.wrapWithFunc(func(values *[]V) {
 		sort.Slice(*values, func(i, j int) bool {
 			return sortValues(i, (*values)[i], j, (*values)[j])
 		})
 	})
-	return stream[V]{
-		values: p.values,
-		chain:  chain,
+}
+
+func (p stream[V]) LastBy(checkValues FilterFunc[V]) (int, V, bool) {
+	values := p.callChain()
+	for i := len(values) - 1; i >= 0; i-- {
+		v := values[i]
+		if checkValues(i, v) {
+			return i, v, true
+		}
 	}
+	var defaultValue V
+	return 0, defaultValue, false
 }
 
 func (p stream[V]) FirstBy(checkValues FilterFunc[V]) (int, V, bool) {
@@ -169,8 +173,24 @@ func (p stream[V]) FirstBy(checkValues FilterFunc[V]) (int, V, bool) {
 	return 0, defaultValue, false
 }
 
+func (p stream[V]) wrapWithFunc(f func(values *[]V)) Stream[V] {
+	chain := append(p.chain, f)
+	return stream[V]{
+		values: p.values,
+		chain:  chain,
+	}
+}
+
+func (p stream[V]) Reverse() Stream[V] {
+	return p.wrapWithFunc(func(values *[]V) {
+		for i, j := 0, len(*values)-1; i < j; i, j = i+1, j-1 {
+			(*values)[i], (*values)[j] = (*values)[j], (*values)[i]
+		}
+	})
+}
+
 func (p stream[V]) Filter(checkValues FilterFunc[V]) Stream[V] {
-	chain := append(p.chain, func(values *[]V) {
+	return p.wrapWithFunc(func(values *[]V) {
 		var newValues []V
 		for i, v := range *values {
 			if checkValues(i, v) {
@@ -179,28 +199,20 @@ func (p stream[V]) Filter(checkValues FilterFunc[V]) Stream[V] {
 		}
 		*values = newValues
 	})
-	return stream[V]{
-		values: p.values,
-		chain:  chain,
-	}
 }
 
 func (p stream[V]) Limit(limit int) Stream[V] {
-	chain := append(p.chain, func(values *[]V) {
+	return p.wrapWithFunc(func(values *[]V) {
 		length := len(*values)
 		if limit >= length {
 			limit = length
 		}
 		*values = (*values)[:limit]
 	})
-	return stream[V]{
-		values: p.values,
-		chain:  chain,
-	}
 }
 
 func (p stream[V]) Skip(skip int) Stream[V] {
-	chain := append(p.chain, func(values *[]V) {
+	return p.wrapWithFunc(func(values *[]V) {
 		length := len(*values)
 		if skip < length {
 			*values = (*values)[skip:]
@@ -208,14 +220,25 @@ func (p stream[V]) Skip(skip int) Stream[V] {
 			*values = []V{}
 		}
 	})
-	return stream[V]{
-		values: p.values,
-		chain:  chain,
-	}
 }
 
+func (p stream[V]) DistinctByKey(distinctKey ExtractKeyFunc[V]) Stream[V] {
+	return p.wrapWithFunc(func(values *[]V) {
+		var unique []V
+		keys := map[interface{}]struct{}{}
+		for i, v := range *values {
+			key := distinctKey(i, v)
+			if _, ok := keys[key]; ok {
+				continue
+			}
+			keys[key] = struct{}{}
+			unique = append(unique, v)
+		}
+		*values = unique
+	})
+}
 func (p stream[V]) Distinct(eqValues EqFunc[V]) Stream[V] {
-	chain := append(p.chain, func(values *[]V) {
+	return p.wrapWithFunc(func(values *[]V) {
 		var unique []V
 	loop:
 		for j, v := range *values {
@@ -230,10 +253,6 @@ func (p stream[V]) Distinct(eqValues EqFunc[V]) Stream[V] {
 
 		*values = unique
 	})
-	return stream[V]{
-		values: p.values,
-		chain:  chain,
-	}
 }
 
 func (p stream[V]) AllMatch(checkValues FilterFunc[V]) bool {

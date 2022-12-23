@@ -1,5 +1,5 @@
 # go-stream
-Lazy stream to work with slices wich will be calculated only when terminal function called or during the mapping
+Lazy stream to work with slices wich will be calculated only when terminal function called or during the wrapping
 ## Creation
 New
 ```
@@ -16,7 +16,7 @@ import "github.com/catmorte/go-streams/pkg/stream"
 array := []SomeType1{...} 
 ...
 streamType1 := stream.New(array)
-streamType2 := stream.Map(streamType1, func(i int, v SomeType1) []SomeType2 {
+streamType2 := stream.Wrap(streamType1, func(i int, v SomeType1) []SomeType2 {
   return []SomeType2{...}
 })
 ```
@@ -33,6 +33,8 @@ streamType2 := stream.Map(streamType1, func(i int, v SomeType1) []SomeType2 {
 `Skip(int) Stream[V]` - skip values from number
 
 `Distinct(compareValues EqFunc[V]) Stream[V]` - remove duplicates using funcition to compare 
+
+`Expand(remap ExpandFunc[V]) Stream[V]` - expand value element to a slice of values
 
 ### Terminal methods
 

@@ -15,19 +15,19 @@ func TestNew(t *testing.T) {
 	t.Run("string stream", func(t *testing.T) {
 		expected := []string{"a", "b", "c", "d", "e", "f", "g"}
 		s := New(expected)
-		assert.ElementsMatch(t, s.Get(), expected)
+		assert.ElementsMatch(t, expected, s.Get())
 	})
 
 	t.Run("int stream", func(t *testing.T) {
 		expected := []int{1, 2, 3, 4, 5, 6, 7, 8}
 		s := New(expected)
-		assert.ElementsMatch(t, s.Get(), expected)
+		assert.ElementsMatch(t, expected, s.Get())
 	})
 
 	t.Run("struct stream", func(t *testing.T) {
 		expected := []v[int]{{value: 1}, {value: 2}, {value: 3}, {value: 4}, {value: 5}, {value: 6}, {value: 7}, {value: 8}}
 		s := New(expected)
-		assert.ElementsMatch(t, s.Get(), expected)
+		assert.ElementsMatch(t, expected, s.Get())
 	})
 
 	t.Run("sort peek filter and get", func(t *testing.T) {
@@ -43,8 +43,8 @@ func TestNew(t *testing.T) {
 		}).Filter(func(i, a int) bool {
 			return a%3 == 0
 		}).Get()
-		assert.ElementsMatch(t, actualGet, expectedGet)
-		assert.ElementsMatch(t, actualPeek, expectedPeek)
+		assert.ElementsMatch(t, expectedGet, actualGet)
+		assert.ElementsMatch(t, expectedPeek, actualPeek)
 	})
 
 	t.Run("skip limit get", func(t *testing.T) {
@@ -52,7 +52,7 @@ func TestNew(t *testing.T) {
 		s := New(original)
 		expected := []int{3, 4}
 		actual := s.Skip(2).Limit(2).Get()
-		assert.ElementsMatch(t, actual, expected)
+		assert.ElementsMatch(t, expected, actual)
 	})
 
 	t.Run("distinct get", func(t *testing.T) {
@@ -62,7 +62,7 @@ func TestNew(t *testing.T) {
 		actual := s.Distinct(func(i, a, j, b int) bool {
 			return a == b
 		}).Get()
-		assert.ElementsMatch(t, actual, expected)
+		assert.ElementsMatch(t, expected, actual)
 	})
 
 	t.Run("distinct by key get", func(t *testing.T) {
@@ -72,7 +72,7 @@ func TestNew(t *testing.T) {
 		actual := s.DistinctByKey(func(i, a int) interface{} {
 			return a
 		}).Get()
-		assert.ElementsMatch(t, actual, expected)
+		assert.ElementsMatch(t, expected, actual)
 	})
 
 	t.Run("expand get", func(t *testing.T) {
@@ -82,7 +82,143 @@ func TestNew(t *testing.T) {
 		actual := s.Expand(func(i int, a string) []string {
 			return []string{strconv.Itoa(i), a}
 		}).Get()
-		assert.ElementsMatch(t, actual, expected)
+		assert.ElementsMatch(t, expected, actual)
 	})
 
+	t.Run("last and first", func(t *testing.T) {
+		original := []int{1, 2, 3, 4, 5, 6, 7, 8, 9}
+		s := New(original)
+		first, okFirst := s.First()
+		last, okLast := s.Last()
+		assert.Equal(t, 1, first)
+		assert.Equal(t, true, okFirst)
+		assert.Equal(t, 9, last)
+		assert.Equal(t, true, okLast)
+	})
+
+	t.Run("last by and first by", func(t *testing.T) {
+		original := []string{"-", "-", "#", "-", "-", "#", "-", "-", "#", "-"}
+		s := New(original)
+		findHash := func(i int, v string) bool {
+			return v == "#"
+		}
+		findStar := func(i int, v string) bool {
+			return v == "*"
+		}
+		firstHashIndex, firstHash, okFirstHash := s.FirstBy(findHash)
+		lastHashIndex, lastHash, okLastHash := s.LastBy(findHash)
+		firstStarIndex, firstStar, okFirstStar := s.FirstBy(findStar)
+		lastStarIndex, lastStar, okLastStar := s.LastBy(findStar)
+		assert.Equal(t, 2, firstHashIndex)
+		assert.Equal(t, "#", firstHash)
+		assert.Equal(t, true, okFirstHash)
+		assert.Equal(t, 8, lastHashIndex)
+		assert.Equal(t, "#", lastHash)
+		assert.Equal(t, true, okLastHash)
+		assert.Equal(t, 0, firstStarIndex)
+		assert.Equal(t, "", firstStar)
+		assert.Equal(t, false, okFirstStar)
+		assert.Equal(t, 0, lastStarIndex)
+		assert.Equal(t, "", lastStar)
+		assert.Equal(t, false, okLastStar)
+	})
+
+	t.Run("skip limit count", func(t *testing.T) {
+		original := []int{1, 2, 3, 4, 5, 6, 7, 8, 9}
+		s := New(original)
+		originalCount := s.Count()
+		skipCount := s.Skip(2).Count()
+		skipLimitCount := s.Skip(2).Limit(2).Count()
+		assert.Equal(t, 9, originalCount)
+		assert.Equal(t, 7, skipCount)
+		assert.Equal(t, 2, skipLimitCount)
+	})
+
+	t.Run("all match", func(t *testing.T) {
+		originalMixed := []int{1, 2, -3, 4, -5, 6, 7, 8, 9}
+		sMixed := New(originalMixed)
+		originalPositive := []int{1, 2, 3, 4, 5, 6, 7, 8, 9}
+		sPositive := New(originalPositive)
+		checkPositive := func(i int, v int) bool {
+			return v > 0
+		}
+		assert.Equal(t, false, sMixed.AllMatch(checkPositive))
+		assert.Equal(t, true, sPositive.AllMatch(checkPositive))
+	})
+
+	t.Run("any match", func(t *testing.T) {
+		originalNegative := []int{-1, -2, -3, -4, -5, -6, -7, -8, -9}
+		sNegative := New(originalNegative)
+		originalMixed := []int{1, 2, -3, 4, -5, 6, 7, 8, 9}
+		sMixed := New(originalMixed)
+		originalPositive := []int{1, 2, 3, 4, 5, 6, 7, 8, 9}
+		sPositive := New(originalPositive)
+		checkPositive := func(i int, v int) bool {
+			return v > 0
+		}
+		assert.Equal(t, false, sNegative.AnyMatch(checkPositive))
+		assert.Equal(t, true, sMixed.AnyMatch(checkPositive))
+		assert.Equal(t, true, sPositive.AnyMatch(checkPositive))
+	})
+
+	t.Run("none match", func(t *testing.T) {
+		originalNegative := []int{-1, -2, -3, -4, -5, -6, -7, -8, -9}
+		sNegative := New(originalNegative)
+		originalMixed := []int{1, 2, -3, 4, -5, 6, 7, 8, 9}
+		sMixed := New(originalMixed)
+		originalPositive := []int{1, 2, 3, 4, 5, 6, 7, 8, 9}
+		sPositive := New(originalPositive)
+		checkPositive := func(i int, v int) bool {
+			return v > 0
+		}
+		assert.Equal(t, true, sNegative.NoneMatch(checkPositive))
+		assert.Equal(t, false, sMixed.NoneMatch(checkPositive))
+		assert.Equal(t, false, sPositive.NoneMatch(checkPositive))
+	})
+
+	t.Run("for each", func(t *testing.T) {
+		original := []int{1, 2, 3, 4, 5, 6, 7, 8, 9}
+		s := New(original)
+		actual := []int{}
+		s.ForEach(func(i, a int) error {
+			actual = append(actual, a)
+			return nil
+		})
+		assert.ElementsMatch(t, original, actual)
+	})
+
+	t.Run("for each async", func(t *testing.T) {
+		original := []int{1, 2, 3, 4, 5, 6, 7, 8, 9}
+		s := New(original)
+		actual := []int{}
+		s.ForEachAsync(func(i, a int) error {
+			actual = append(actual, a)
+			return nil
+		})
+		assert.ElementsMatch(t, original, actual)
+	})
+
+	t.Run("for each chunk", func(t *testing.T) {
+		original := []int{1, 2, 3, 4, 5, 6, 7, 8, 9}
+		s := New(original)
+		actualChunks := [][]int{}
+		s.ForEachChunk(3, func(from, to int, a []int) error {
+			actualChunks = append(actualChunks, a)
+			return nil
+		})
+		expectedChunks := [][]int{{1, 2, 3}, {4, 5, 6}, {7, 8, 9}}
+		assert.ElementsMatch(t, expectedChunks, actualChunks)
+	})
+
+	t.Run("for each chunk async", func(t *testing.T) {
+		original := []int{1, 2, 3, 4, 5, 6, 7, 8, 9}
+		s := New(original)
+		actualChunks := [][]int{}
+		s.ForEachChunkAsync(3, func(from, to int, a []int) error {
+			actualChunks = append(actualChunks, a)
+			return nil
+		})
+		expectedChunks := [][]int{{1, 2, 3}, {4, 5, 6}, {7, 8, 9}}
+		assert.ElementsMatch(t, expectedChunks, actualChunks)
+	})
 }

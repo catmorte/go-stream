@@ -1,25 +1,12 @@
 # go-stream
 Lazy stream to work with slices wich will be calculated only when terminal function called or during the wrapping
 ## Creation
-New
-```
-import "github.com/catmorte/go-streams/pkg/stream"
-...
-array := []SomeType1{...} 
-...
-stream := stream.New(array)
-```
-Mapped from another
-```
-import "github.com/catmorte/go-streams/pkg/stream"
-...
-array := []SomeType1{...} 
-...
-streamType1 := stream.New(array)
-streamType2 := stream.Wrap(streamType1, func(i int, v SomeType1) []SomeType2 {
-  return []SomeType2{...}
-})
-```
+`New[V any](slice []V) Stream[V]` - to create stream instance
+
+`Wrap[V any, NV any](s Stream[V], wrapValue WrapValueFunc[V, NV]) Stream[NV]` - executing stream, converts it's values to the new type and creates stream of new type 
+
+`Join[V any, W any, VW any, K comparable](sLeft Stream[V], extractKeyLeft ExtractComparableKeyFunc[V, K], sRight Stream[W], extractKeyRight ExtractComparableKeyFunc[W, K], merge MergeValuesFunc[V, W, VW]) Stream[VW]` - joins to streams and creates stream of new type based on mapping
+
 ## Methods
 ### Non-terminal methods
 `Sort(sortValues SortFunc[V]) Stream[V]` - sort values with function

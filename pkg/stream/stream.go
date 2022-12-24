@@ -7,16 +7,18 @@ import (
 )
 
 type (
-	SortFunc[V any]              func(i int, a V, j int, b V) bool
-	FilterFunc[V any]            func(i int, a V) bool
-	DoFunc[V any]                func(i int, a V) error
-	ExpandFunc[V any]            func(i int, a V) []V
-	PeekFunc[V any]              func(i int, a V)
-	EqFunc[V any]                func(i int, a V, j int, b V) bool
-	DoChunkFunc[V any]           func(from, to int, chunk []V) error
-	ExtractKeyFunc[V any]        func(i int, a V) interface{}
-	WrapValueFunc[V any, NV any] func(i int, value V) []NV
-	stream[V any]                struct {
+	SortFunc[V any]                               func(i int, a V, j int, b V) bool
+	FilterFunc[V any]                             func(i int, a V) bool
+	DoFunc[V any]                                 func(i int, a V) error
+	ExpandFunc[V any]                             func(i int, a V) []V
+	PeekFunc[V any]                               func(i int, a V)
+	EqFunc[V any]                                 func(i int, a V, j int, b V) bool
+	DoChunkFunc[V any]                            func(from, to int, chunk []V) error
+	ExtractKeyFunc[V any]                         func(i int, a V) interface{}
+	ExtractComparableKeyFunc[V any, K comparable] func(i int, a V) K
+	WrapValueFunc[V any, NV any]                  func(i int, value V) []NV
+	MergeValuesFunc[V any, W any, VW any]         func(okV bool, v V, okW bool, w W) []VW
+	stream[V any]                                 struct {
 		values []V
 		chain  []func(*[]V)
 	}
@@ -47,15 +49,42 @@ type (
 	}
 )
 
+func Join[V any, W any, VW any, K comparable](sLeft Stream[V], extractKeyLeft ExtractComparableKeyFunc[V, K], sRight Stream[W], extractKeyRight ExtractComparableKeyFunc[W, K], merge MergeValuesFunc[V, W, VW]) Stream[VW] {
+	rightMap := map[K]W{}
+	rightFound := map[K]struct{}{}
+	sRight.ForEach(func(i int, a W) error {
+		key := extractKeyRight(i, a)
+		rightFound[key] = struct{}{}
+		rightMap[key] = a
+		return nil
+	})
+
+	newValues := []VW{}
+
+	sLeft.ForEach(func(i int, a V) error {
+		key := extractKeyLeft(i, a)
+		right, okRight := rightMap[key]
+		newValues = append(newValues, merge(true, a, okRight, right)...)
+		if okRight {
+			delete(rightFound, key)
+		}
+		return nil
+	})
+
+	for k := range rightFound {
+		var defaultV V
+		newValues = append(newValues, merge(false, defaultV, true, rightMap[k])...)
+	}
+	return New(newValues)
+}
+
 func Wrap[V any, NV any](s Stream[V], wrapValue WrapValueFunc[V, NV]) Stream[NV] {
 	values := s.Get()
 	newValues := []NV{}
 	for i, v := range values {
 		newValues = append(newValues, wrapValue(i, v)...)
 	}
-	return stream[NV]{
-		values: newValues,
-	}
+	return New(newValues)
 }
 
 func New[S ~[]V, V any](slice S) Stream[V] {
@@ -114,7 +143,8 @@ func (p stream[V]) ForEachChunkAsync(chunkSize int, do DoChunkFunc[V]) error {
 		if end > len(values) {
 			end = len(values)
 		}
-		g.Go(func() error { return do(start, end, values[start:end]) })
+		subvalues := values[start:end]
+		g.Go(func() error { return do(start, end, subvalues) })
 	}
 	return g.Wait()
 }

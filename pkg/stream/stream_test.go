@@ -2,6 +2,7 @@ package stream
 
 import (
 	"strconv"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -11,7 +12,67 @@ type v[V any] struct {
 	value V
 }
 
-func TestNew(t *testing.T) {
+func TestJoin(t *testing.T) {
+	type city struct {
+		name        string
+		countryCode string
+	}
+	type country struct {
+		code string
+		name string
+	}
+	type cityView struct {
+		name        string
+		countryName string
+	}
+	extractCityJoinKey := func(i int, c city) string {
+		return c.countryCode
+	}
+	extractCountryJoinKey := func(i int, c country) string {
+		return c.code
+	}
+	cities := []city{
+		{name: "Gomel", countryCode: "by"},
+		{name: "Minsk", countryCode: "by"},
+		{name: "London", countryCode: "gb"},
+		{name: "Istanbul", countryCode: "tr"},
+	}
+	countries := []country{
+		{name: "Belarus", code: "by"},
+		{name: "Turkiye", code: "tr"},
+		{name: "China", code: "cn"},
+	}
+	sCities := New(cities)
+	sCountries := New(countries)
+	actualCityView := Join(sCities, extractCityJoinKey, sCountries, extractCountryJoinKey, func(okV bool, v city, okW bool, w country) []cityView {
+		cityName := v.name
+		countryName := w.name
+		if !okV {
+			cityName = "unknown city"
+		}
+		if !okW {
+			countryName = "unknown country"
+		}
+		return []cityView{
+			{
+				name:        cityName,
+				countryName: countryName,
+			},
+		}
+	}).Get()
+
+	expectedCityView := []cityView{
+		{name: "Gomel", countryName: "Belarus"},
+		{name: "Minsk", countryName: "Belarus"},
+		{name: "London", countryName: "unknown country"},
+		{name: "Istanbul", countryName: "Turkiye"},
+		{name: "unknown city", countryName: "China"},
+	}
+
+	assert.ElementsMatch(t, expectedCityView, actualCityView)
+}
+
+func TestBasic(t *testing.T) {
 	t.Run("string stream", func(t *testing.T) {
 		expected := []string{"a", "b", "c", "d", "e", "f", "g"}
 		s := New(expected)
@@ -191,8 +252,11 @@ func TestNew(t *testing.T) {
 		original := []int{1, 2, 3, 4, 5, 6, 7, 8, 9}
 		s := New(original)
 		actual := []int{}
+		lock := new(sync.Mutex)
 		s.ForEachAsync(func(i, a int) error {
+			lock.Lock()
 			actual = append(actual, a)
+			lock.Unlock()
 			return nil
 		})
 		assert.ElementsMatch(t, original, actual)
@@ -213,11 +277,18 @@ func TestNew(t *testing.T) {
 	t.Run("for each chunk async", func(t *testing.T) {
 		original := []int{1, 2, 3, 4, 5, 6, 7, 8, 9}
 		s := New(original)
+
 		actualChunks := [][]int{}
-		s.ForEachChunkAsync(3, func(from, to int, a []int) error {
+		lock := new(sync.Mutex)
+		err := s.ForEachChunkAsync(3, func(from, to int, a []int) error {
+			lock.Lock()
 			actualChunks = append(actualChunks, a)
+			lock.Unlock()
 			return nil
 		})
+		if err != nil {
+			panic(err)
+		}
 		expectedChunks := [][]int{{1, 2, 3}, {4, 5, 6}, {7, 8, 9}}
 		assert.ElementsMatch(t, expectedChunks, actualChunks)
 	})

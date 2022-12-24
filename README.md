@@ -34,13 +34,21 @@ streamType2 := stream.Wrap(streamType1, func(i int, v SomeType1) []SomeType2 {
 
 `Distinct(compareValues EqFunc[V]) Stream[V]` - remove duplicates using funcition to compare 
 
+`DistinctByKey(compareValues ExtractKeyFunc[V]) Stream[V]` - remove duplicates using funcition to create key 
+
 `Expand(remap ExpandFunc[V]) Stream[V]` - expand value element to a slice of values
+
+`Reverse() Stream[V]` - reverse slice order
 
 ### Terminal methods
 
 `First() (V, bool)` - get first value (true if exists)
 
+`FirstBy(checkValues FilterFunc[V]) (int, V, bool)` - get first value that is satisfying condition func returns index, value and if exists (true if exists)
+
 `Last() (V, bool)` - get last value (true if exists)
+
+`LastBy(checkValues FilterFunc[V]) (int, V, bool)` - get last value that is satisfying condition func returns index, value and if exists (true if exists)
 
 `Count() int` - get amount of values
 
@@ -60,7 +68,6 @@ streamType2 := stream.Wrap(streamType1, func(i int, v SomeType1) []SomeType2 {
     
 `Get() []V` - get values
 
-`FirstBy(checkValues FilterFunc[V]) (int, V, bool)` - get first value that is satisfying condition func returns index, value and if exists (true if exists)
 
 
 

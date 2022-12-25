@@ -1,7 +1,7 @@
 # go-stream
 Lazy stream to work with slices wich will be calculated only when terminal function called or during the wrapping
 ## Creation
-`New[V any](slice []V) Stream[V]` - to create stream instance
+`New[V any](slice ...V) Stream[V]` - to create stream instance
 
 `Wrap[V any, NV any](s Stream[V], wrapValue WrapValueFunc[V, NV]) Stream[NV]` - executing stream, converts it's values to the new type and creates stream of new type 
 

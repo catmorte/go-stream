@@ -75,7 +75,7 @@ func Join[V any, W any, VW any, K comparable](sLeft Stream[V], extractKeyLeft Ex
 		var defaultV V
 		newValues = append(newValues, merge(false, defaultV, true, rightMap[k])...)
 	}
-	return New(newValues)
+	return newStream(newValues)
 }
 
 func Wrap[V any, NV any](s Stream[V], wrapValue WrapValueFunc[V, NV]) Stream[NV] {
@@ -84,10 +84,14 @@ func Wrap[V any, NV any](s Stream[V], wrapValue WrapValueFunc[V, NV]) Stream[NV]
 	for i, v := range values {
 		newValues = append(newValues, wrapValue(i, v)...)
 	}
-	return New(newValues)
+	return newStream(newValues)
 }
 
-func New[S ~[]V, V any](slice S) Stream[V] {
+func New[V any](slice ...V) Stream[V] {
+	return newStream(slice)
+}
+
+func newStream[V any](slice []V) Stream[V] {
 	return stream[V]{
 		values: slice,
 	}

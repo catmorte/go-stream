@@ -1,4 +1,4 @@
-module github.com/catmorte/go-streams
+module github.com/catmorte/go-stream
 
 go 1.18
 

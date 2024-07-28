@@ -17,6 +17,7 @@ type (
 	ExtractKeyFunc[V any]                         func(i int, a V) interface{}
 	ExtractComparableKeyFunc[V any, K comparable] func(i int, a V) K
 	WrapValueFunc[V any, NV any]                  func(i int, value V) []NV
+	Wrap1to1ValueFunc[V any, NV any]              func(i int, value V) NV
 	MergeValuesFunc[V any, W any, VW any]         func(okV bool, v V, okW bool, w W) []VW
 	stream[V any]                                 struct {
 		values []V
@@ -49,10 +50,19 @@ type (
 	}
 )
 
-func Join[V any, W any, VW any, K comparable](sLeft Stream[V], extractKeyLeft ExtractComparableKeyFunc[V, K], sRight Stream[W], extractKeyRight ExtractComparableKeyFunc[W, K], merge MergeValuesFunc[V, W, VW]) Stream[VW] {
+func Join[
+	V any,
+	W any,
+	VW any,
+	K comparable](
+	sLeft Stream[V],
+	extractKeyLeft ExtractComparableKeyFunc[V, K],
+	sRight Stream[W],
+	extractKeyRight ExtractComparableKeyFunc[W, K],
+	merge MergeValuesFunc[V, W, VW]) Stream[VW] {
 	rightMap := map[K]W{}
 	rightFound := map[K]struct{}{}
-	sRight.ForEach(func(i int, a W) error {
+	_ = sRight.ForEach(func(i int, a W) error {
 		key := extractKeyRight(i, a)
 		rightFound[key] = struct{}{}
 		rightMap[key] = a
@@ -61,7 +71,7 @@ func Join[V any, W any, VW any, K comparable](sLeft Stream[V], extractKeyLeft Ex
 
 	newValues := []VW{}
 
-	sLeft.ForEach(func(i int, a V) error {
+	_ = sLeft.ForEach(func(i int, a V) error {
 		key := extractKeyLeft(i, a)
 		right, okRight := rightMap[key]
 		newValues = append(newValues, merge(true, a, okRight, right)...)
@@ -74,6 +84,15 @@ func Join[V any, W any, VW any, K comparable](sLeft Stream[V], extractKeyLeft Ex
 	for k := range rightFound {
 		var defaultV V
 		newValues = append(newValues, merge(false, defaultV, true, rightMap[k])...)
+	}
+	return newStream(newValues)
+}
+
+func Wrap1to1[V any, NV any](s Stream[V], wrapValue Wrap1to1ValueFunc[V, NV]) Stream[NV] {
+	values := s.Get()
+	newValues := []NV{}
+	for i, v := range values {
+		newValues = append(newValues, wrapValue(i, v))
 	}
 	return newStream(newValues)
 }

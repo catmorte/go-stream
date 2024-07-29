@@ -106,6 +106,17 @@ func Wrap[V any, NV any](s Stream[V], wrapValue WrapValueFunc[V, NV]) Stream[NV]
 	return newStream(newValues)
 }
 
+func FilterByType[V any, NV any](s Stream[V]) Stream[NV] {
+	values := s.Get()
+	newValues := []NV{}
+	for _, v := range values {
+		if nv, ok := any(v).(NV); ok {
+			newValues = append(newValues, nv)
+		}
+	}
+	return newStream(newValues)
+}
+
 func New[V any](slice ...V) Stream[V] {
 	return newStream(slice)
 }

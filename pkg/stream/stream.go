@@ -136,23 +136,21 @@ func (p stream[V]) callChain() []V {
 }
 
 func (p stream[V]) First() (V, bool) {
-	length := p.Count()
-	if length == 0 {
+	values := p.callChain()
+	if len(values) == 0 {
 		var defaultValue V
 		return defaultValue, false
 	}
-	values := p.callChain()
 	return values[0], true
 }
 
 func (p stream[V]) Last() (V, bool) {
-	length := p.Count()
-	if length == 0 {
+	values := p.callChain()
+	if len(values) == 0 {
 		var defaultValue V
 		return defaultValue, false
 	}
-	values := p.callChain()
-	return values[length-1], true
+	return values[len(values)-1], true
 }
 
 func (p stream[V]) ForEachChunk(chunkSize int, do DoChunkFunc[V]) error {

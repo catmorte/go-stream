@@ -141,7 +141,8 @@ func (p stream[V]) First() (V, bool) {
 		var defaultValue V
 		return defaultValue, false
 	}
-	return p.values[0], true
+	values := p.callChain()
+	return values[0], true
 }
 
 func (p stream[V]) Last() (V, bool) {
@@ -150,7 +151,8 @@ func (p stream[V]) Last() (V, bool) {
 		var defaultValue V
 		return defaultValue, false
 	}
-	return p.values[length-1], true
+	values := p.callChain()
+	return values[length-1], true
 }
 
 func (p stream[V]) ForEachChunk(chunkSize int, do DoChunkFunc[V]) error {
